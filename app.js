@@ -1,4 +1,5 @@
-require('./api/data/dbconnection.js').open();
+//require('./api/data/dbconnection.js').open();// old connection method using native driver
+require('./api/data/db.js');// new connection method using mongoose
 var express = require('express');
 var app = express();
 var path = require('path');
