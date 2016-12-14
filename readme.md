@@ -1,2 +1,2 @@
-# MEAN stack app
-This repo is a simple MEAN stack app demo# mean-stack-app
+#Demo app
+A simple demo app using MongoDB + Express + AngularJS + node.js
