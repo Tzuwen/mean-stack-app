@@ -1,14 +1,64 @@
-var dbconn = require('../data/dbconnection.js');
-var hotelData = require('../data/hotel-data.json');
-var ObjectId = require('mongodb').ObjectId;
+// connection method using native driver and hard coded data
+// var dbconn = require('../data/dbconnection.js');
+// var ObjectId = require('mongodb').ObjectId;
+// var hotelData = require('../data/hotel-data.json');
+
+// connection method and model using mongoose
+var mongoose = require('mongoose');
+var Hotel = mongoose.model('Hotel');
+
+// Query using lat & lng 
+// A geoJSON point
+var runGeoQuery = function (req, res) {
+    var lng = parseFloat(req.query.lng);
+    var lat = parseFloat(req.query.lat);
+
+    if (isNaN(lng) || isNaN(lat)) {
+        res
+            .status(400)
+            .json({
+                "message": "If supplied in querystring, lng and lat must both be numbers"
+            });
+        return;
+    }
+
+    var point = {
+        type: "Point",
+        coordinates: [lng, lat]
+    };
+
+    var geoOptions = {
+        spherical: true,
+        macDistance: 2000,
+        num: 5
+    };
+
+    Hotel
+        .geoNear(point, geoOptions, function (err, result, stats) {
+            if (err) {
+                console.log("Error finding hotels");
+                res
+                    .status(500)
+                    .json(err);
+            } else {
+                res
+                    .status(200)
+                    .json(results);
+            }
+        });
+};
 
 module.exports.hotelsGetAll = function (req, res) {
 
-    var db = dbconn.get();
-    var collection = db.collection('hotels');// define collections
-
     var offset = 0;
     var count = 5;
+    var maxCount = 10;
+
+    // if lng & lat has input, call runGeoQuery()
+    if (req.query && req.query.lat && req.query.lng) {
+        runGeoQuery(req, res);
+        return;
+    }
 
     if (req.query && req.query.offset) {
         offset = parseInt(req.query.offset, 10);
@@ -18,38 +68,108 @@ module.exports.hotelsGetAll = function (req, res) {
         count = parseInt(req.query.count, 10);
     }
 
-    // cast into array and return all docs
-    collection
+    // if params are not number, stop query
+    if (isNaN(offset) || isNaN(count)) {
+        res
+            .status(400)
+            .json({ "message": "If supplied in querystring count and offset should numbers" });
+        return;
+    }
+
+    if (count > maxCount) {
+        res
+            .status(400)
+            .json({ "message": "Count limit of " + maxCount + " exceeded" });
+        return;
+    }
+
+    //////////////
+    // mongoose //
+    //////////////
+    Hotel
         .find()
         .skip(offset)
         .limit(count)
-        .toArray(function (err, docs) {
-            res
-                .status(200)
-                .json(docs);
+        .exec(function (err, hotels) {
+            if (err) {
+                console.log("Error finding hotels");
+                res
+                    .status(500)
+                    .json(err);
+            } else {
+                console.log("Found hotels", hotels.length);
+                res
+                    .status(200)
+                    .json(hotels);
+            }
         });
+
+    /////////////////////////
+    // mongo native driver //
+    ////////////////////////
+    // var db = dbconn.get();
+    // var collection = db.collection('hotels');// define collections
+    //// cast into array and return all docs
+    // collection
+    //     .find()
+    //     .skip(offset)
+    //     .limit(count)
+    //     .toArray(function (err, docs) {
+    //         res
+    //             .status(200)
+    //             .json(docs);
+    //     });
 };
 
 module.exports.hotelsGetOne = function (req, res) {
-    var db = dbconn.get();
-    var collection = db.collection('hotels');
     var hotelId = req.params.hotelId;
+    //////////////
+    // mongoose //
+    //////////////
+    Hotel
+        .findById(hotelId)
+        .exec(function (err, doc) {
+            var response = {
+                status: 200,
+                message: doc
+            };
 
-    collection
-        .findOne({
-            _id: ObjectId(hotelId)// remember to require ObjectId, var ObjectId = require('mongodb').ObjectId;
-        }, function (err, doc) {
+            if (err) {
+                console.log("Error finding hotel");
+                response.status = 500;
+                response.message = err;
+            } else if (!doc) {
+                response.status = 404;
+                response.message = { "message": "Hotel Id not found" };
+            }
             res
-                .status(200)
-                .json(doc);
+                .status(response.status)
+                .json(response.message);
         });
+
+    /////////////////////////
+    // mongo native driver //
+    ////////////////////////
+    // var db = dbconn.get();
+    // var collection = db.collection('hotels');
+    // collection
+    //     .findOne({
+    //         _id: ObjectId(hotelId)// remember to require ObjectId, var ObjectId = require('mongodb').ObjectId;
+    //     }, function(err, doc) {
+    //         res
+    //             .status(200)
+    //             .json(doc);
+    //     });
 };
 
 module.exports.hotelsAddOne = function (req, res) {
+    /////////////////////////
+    // mongo native driver //
+    ////////////////////////
+    var newHotel;
     var db = dbconn.get();
     var collection = db.collection('hotels');
-    var newHotel;
-
+    
     if (req.body && req.body.name && req.body.stars) {
         newHotel = req.body;
         newHotel.stars = parseInt(req.body.stars, 10);// cast string into int
