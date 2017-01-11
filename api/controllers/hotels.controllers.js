@@ -172,6 +172,7 @@ var _splitArray = function (input) {
     return output;
 };
 
+// Add a hotel
 module.exports.hotelsAddOne = function (req, res) {
     //////////////
     // mongoose //
@@ -227,6 +228,8 @@ module.exports.hotelsAddOne = function (req, res) {
     // }
 };
 
+
+// Update hotel
 module.exports.hotelsUpdateOne = function (req, res) {
     var hotelId = req.params.hotelId;
     Hotel
@@ -279,3 +282,22 @@ module.exports.hotelsUpdateOne = function (req, res) {
             }
         });
 };
+
+// Delete hotel
+module.exports.hotelsDeleteOne = function (req, res) {
+    var hotelId = req.params.hotelId;
+    Hotel
+        .findByIdAndRemove(hotelId)
+        .exec(function (err, hotel) {
+            if (err) {
+                res
+                    .status(404)
+                    .json(err);
+            } else {
+                res
+                    .status(204)
+                    .json();
+            }
+        });
+};
+

@@ -98,7 +98,7 @@ var _addReview = function (req, res, hotel) {
     });
 };
 
-// GET all reviews of a hotel
+// Add a review 
 module.exports.reviewsAddOne = function (req, res) {
     var hotelId = req.params.hotelId;
 
@@ -132,6 +132,7 @@ module.exports.reviewsAddOne = function (req, res) {
         });
 }
 
+// Update review
 module.exports.reviewsUpdateOne = function (req, res) {
     var hotelId = req.params.hotelId;
     var reviewId = req.params.reviewId;
@@ -139,8 +140,8 @@ module.exports.reviewsUpdateOne = function (req, res) {
     Hotel
         .findById(hotelId)
         .select('reviews')
-        .exec(function (err, hotel) {  
-            var thisReview;          
+        .exec(function (err, hotel) {
+            var thisReview;
             var response = {
                 status: 200,
                 message: {}
@@ -174,6 +175,62 @@ module.exports.reviewsUpdateOne = function (req, res) {
                 thisReview.name = req.body.name;
                 thisReview.rating = parseInt(req.body.rating, 10);
                 thisReview.review = req.body.review;
+                hotel.save(function (err, hotelUpdated) {
+                    if (err) {
+                        res
+                            .status(500)
+                            .json(err);
+                    } else {
+                        res
+                            .status(204)
+                            .json();
+                    }
+                });
+            }
+        });
+};
+
+// Delete reviews
+module.exports.reviewsDeleteOne = function (req, res) {
+    var hotelId = req.params.hotelId;
+    var reviewId = req.params.reviewId;
+
+    Hotel
+        .findById(hotelId)
+        .select('reviews')
+        .exec(function (err, hotel) {
+            var thisReview;
+            var response = {
+                status: 200,
+                message: {}
+            };
+
+            if (err) {
+                response.status = 500;
+                response.message = err;
+            } else if (!hotel) {
+                response.status = 404;
+                response.message = {
+                    "message": "Hotel ID not found " + id
+                };
+            } else {
+                // Get the review
+                thisReview = hotel.reviews.id(reviewId);
+                // If the review doesn't exist Mongoose returns null
+                if (!thisReview) {
+                    response.status = 404;
+                    response.message = {
+                        "message": "Review ID not found " + reviewId
+                    };
+                }
+            }
+
+            if (response.status !== 200) {
+                res
+                    .status(response.status)
+                    .json(response.message);
+            } else {
+                hotel.reviews.id(reviewId).remove();
                 hotel.save(function (err, hotelUpdated) {
                     if (err) {
                         res
