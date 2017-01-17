@@ -14,8 +14,7 @@ router
     .route('/hotels/:hotelId')
     .get(ctrlHotels.hotelsGetOne)
     .put(ctrlHotels.hotelsUpdateOne)
-    .delete(ctrlHotels.hotelsDeleteOne);    
-
+    .delete(ctrlHotels.hotelsDeleteOne);
 
 // Review routes
 router
